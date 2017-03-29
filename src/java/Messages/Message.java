@@ -5,63 +5,89 @@
  */
 package Messages;
 
-import java.io.IOException;
-import java.io.StringReader;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
-import javax.websocket.OnMessage;
-import javax.websocket.OnOpen;
-import javax.websocket.RemoteEndpoint;
-import javax.websocket.Session;
-import javax.websocket.server.ServerEndpoint;
 
 /**
  *
  * @author c0600299
  */
-@ServerEndpoint("/messages")
-@ApplicationScoped
 public class Message {
-    
-    @Inject
-    private MessageController msgCtrl;
-    
-    @OnMessage
-    public void receiveMeesage(String contents, Session session) throws IOException{
-        if (!msgCtrl.containsSession(session)){
-            msgCtrl.addSession(session);
-        }
-        
-        JsonObject json = Json.createReader(new StringReader(contents)).readObject();
-        msgCtrl.addMessage(json);
-        
-        for (Session message: msgCtrl.getSessions()){
-            RemoteEndpoint.Basic basic = message.getBasicRemote();
-            String output = Json.createArrayBuilder().add(json).build().toString();
-            basic.sendText(output);
+    private int id;
+    private String title;
+    private String contents;
+    private String author;
+    private Date senttime;
+    private SimpleDateFormat sdf = new SimpleDateFormat("MM-dd-yyyy:HH-mm-ssSS");
+
+    public Message() {
+    }
+
+    public Message(JsonObject json){
+        id = json.getInt("id");
+        title = json.getString("title");
+        contents = json.getString("contents");
+        author = json.getString("author");
+        try {
+            senttime = sdf.parse(json.getString("senttime"));
+        } catch (ParseException ex) {
+            Logger.getLogger(Message.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
-    @OnOpen
-    public void connected(Session session) throws IOException{
-        if (!msgCtrl.containsSession(session)){
-            msgCtrl.addSession(session);
-        }
-        
-        JsonArrayBuilder arr = Json.createArrayBuilder();
-        
-        for(JsonObject m:msgCtrl.getMessages()){
-            arr.add(m);
-        }
-        
-        JsonArray output = arr.build();
-        
-        RemoteEndpoint.Basic basic = session.getBasicRemote();
-        System.out.println("Connected to " + session.getId() + " and sending " + output.toString());
-        basic.sendText(output.toString());
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getContents() {
+        return contents;
+    }
+
+    public void setContents(String contents) {
+        this.contents = contents;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author;
+    }
+
+    public Date getSenttime() {
+        return senttime;
+    }
+
+    public void setSenttime(Date senttime) {
+        this.senttime = senttime;
+    }
+    
+    public JsonObject toJson(){
+        JsonObject json = Json.createObjectBuilder()
+                .add("id", id)
+                        .add("author", author)
+                        .add("title", title)
+                        .add("contents", contents)
+                        .add("senttime", sdf.format(senttime))
+                .build();
+        return json;
     }
 }
